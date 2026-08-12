@@ -42,18 +42,21 @@ static void build_restore_commands_topdown(const Node *node, char *buf, size_t b
 
     char cmd[512];
     
-    /* 2. Apply split to the anchor of this container branch */
-    snprintf(cmd, sizeof(cmd), "[con_id=%ld] %s; ", (long)anchor_id, split_dir);
+    /* 2. Explicitly focus the anchor window first, then apply the split */
+    snprintf(cmd, sizeof(cmd), "[con_id=%ld] focus; [con_id=%ld] %s; ", 
+             (long)anchor_id, (long)anchor_id, split_dir);
     strncat(buf, cmd, buf_size - strlen(buf) - 1);
 
     /* 3. Generate a unique temporary mark for this node */
     char mark_name[64];
     snprintf(mark_name, sizeof(mark_name), "_swaytile_%ld", (long)node->id);
 
-    snprintf(cmd, sizeof(cmd), "[con_id=%ld] mark --add \"%s\"; ", (long)anchor_id, mark_name);
+    /* 4. Focus and mark the anchor so subsequent children move relative to it */
+    snprintf(cmd, sizeof(cmd), "[con_id=%ld] focus; [con_id=%ld] mark --add \"%s\"; ", 
+             (long)anchor_id, (long)anchor_id, mark_name);
     strncat(buf, cmd, buf_size - strlen(buf) - 1);
 
-    /* 4. Move subsequent children into this node's split container */
+    /* 5. Move subsequent children into this node's split container */
     for (int i = 1; i < node->num_children; i++) {
         int64_t child_anchor = get_first_leaf_id(node->children[i]);
         if (child_anchor <= 0) continue;
@@ -63,11 +66,12 @@ static void build_restore_commands_topdown(const Node *node, char *buf, size_t b
         strncat(buf, cmd, buf_size - strlen(buf) - 1);
     }
 
-    /* 5. Clean up the mark */
-    snprintf(cmd, sizeof(cmd), "[con_id=%ld] unmark \"%s\"; ", (long)anchor_id, mark_name);
+    /* 6. Clean up the mark (focusing the anchor first to be safe) */
+    snprintf(cmd, sizeof(cmd), "[con_id=%ld] focus; [con_id=%ld] unmark \"%s\"; ", 
+             (long)anchor_id, (long)anchor_id, mark_name);
     strncat(buf, cmd, buf_size - strlen(buf) - 1);
 
-    /* 6. Recurse down into children AFTER setting up the parent split */
+    /* 7. Recurse down into children AFTER setting up the parent split */
     for (int i = 0; i < node->num_children; i++) {
         build_restore_commands_topdown(node->children[i], buf, buf_size);
     }
@@ -110,10 +114,12 @@ char *flatten_build_toggle_cmd(const Node *root, const char *mode) {
         snprintf(reset_cmd, sizeof(reset_cmd), "[workspace=\"%s\"] layout splitv; ", ws->name);
         strncat(cmd_buf, reset_cmd, buf_size - strlen(cmd_buf) - 1);
 
-        /* 2. Rebuild saved tree hierarchy */
+        /* 2. Rebuild saved tree hierarchy using the preserved layout tree */
         Node *saved_tree = layout_map_get_tree(ws->name);
         if (saved_tree) {
             build_restore_commands_topdown(saved_tree, cmd_buf, buf_size);
+            
+            /* Clear the saved tree ONLY after it has been successfully used */
             layout_map_clear_tree(ws->name);
         }
 
@@ -122,8 +128,10 @@ char *flatten_build_toggle_cmd(const Node *root, const char *mode) {
 
     /* FLATTEN MODE (tabbed / stacked) */
     const char *target_layout = (strcmp(mode, "stacked") == 0 || strcmp(mode, "stacking") == 0) 
-                                 ? "stacking" : "tabbed";
+                              ? "stacking" : "tabbed";
 
+    /* ONLY save the tree if we aren't already flattened 
+       (prevents overwriting our good restore tree with a flat tabbed tree snapshot) */
     if (!currently_flattened) {
         layout_map_save_tree(ws->name, ws);
     }

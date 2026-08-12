@@ -16,20 +16,23 @@
 
 #define MAX_ALLOWED_WORKSPACES 32
 
-static int split_limit = 0; /* 0 means unlimited */
+static int split_limit = 0;
+static bool verbose_mode = false;
 static char *allowed_workspaces[MAX_ALLOWED_WORKSPACES];
 static int allowed_workspace_count = 0;
 
 static void print_usage(const char *prog_name) {
     printf("Usage: %s [OPTIONS]\n\n", prog_name);
     printf("Options:\n");
-    printf("  -t, --toggle <MODE>  Change or toggle workspace layout mode:\n");
-    printf("                       - toggle  : Toggle between tabbed and dynamic autotiling\n");
-    printf("                       - tabbed  : Flatten windows into a single tabbed row\n");
-    printf("                       - stacked : Flatten windows into a single stacked column (or 'stacking')\n");
-    printf("                       - split   : Restore dynamic autotiling (or 'default')\n");
-    printf("  -w, --workspace <WS> Limit autotiling to specific workspace(s)\n");
-    printf("  -h, --help           Display this help message and exit\n");
+    printf("  -t, --toggle <MODE>   Change or toggle workspace layout mode:\n");
+    printf("                        - toggle  : Toggle between tabbed and dynamic autotiling\n");
+    printf("                        - tabbed  : Flatten windows into a single tabbed row\n");
+    printf("                        - stacked : Flatten windows into a single stacked column (or 'stacking')\n");
+    printf("                        - split   : Restore dynamic autotiling (or 'default')\n");
+    printf("  -w, --workspace <WS>  Limit autotiling to specific workspace(s)\n");
+    printf("  -l, --limit <NUM>     Cap the number of split direction changes per workspace\n");
+    printf("  -v, --verbose         Enable verbose logging output to stderr\n");
+    printf("  -h, --help            Display this help message and exit\n");
 }
 
 static void add_allowed_workspace(const char *ws_name) {
@@ -88,40 +91,45 @@ const char *calculate_next_split(const Node *root, const Node *focused) {
 
     if (ws && ws->name) {
         bool actual_is_flattened = (ws->layout == LAYOUT_TABBED || 
-                                    ws->layout == LAYOUT_STACKED || 
-                                    ws->layout == LAYOUT_STACKING);
+                                     ws->layout == LAYOUT_STACKED || 
+                                     ws->layout == LAYOUT_STACKING);
 
-        /* 1. If Sway tree confirms workspace is tabbed/stacked, keep map as TRUE */
         if (actual_is_flattened) {
             layout_map_set_flattened(ws->name, true);
             return NULL;
         }
 
-        /* 2. If layout_map was set to TRUE by toggle command, suppress autotile */
         if (layout_map_is_flattened(ws->name)) {
             return NULL;
         }
     }
 
-    if (focused->width > focused->height) {
-        return "splith";
-    } else {
-        return "splitv";
+    const char *natural_split = (focused->width > focused->height) ? "splith" : "splitv";
+
+    if (ws && ws->name && split_limit > 0) {
+        /* If the change limit is hit, return NULL so Sway opens 
+           the next window as a peer/sibling instead of nesting a new split container. */
+        if (!layout_map_check_and_update_split(ws->name, natural_split, split_limit)) {
+            return NULL; 
+        }
     }
+
+    return natural_split;
 }
 
 int main(int argc, char *argv[]) {
     int opt;
 
     static struct option long_options[] = {
-        {"limit",         required_argument, 0, 'l'},
-        {"workspace",     required_argument, 0, 'w'},
+        {"limit",     required_argument, 0, 'l'},
+        {"workspace", required_argument, 0, 'w'},
         {"toggle-layout", required_argument, 0, 't'},
-        {"help",          no_argument,       0, 'h'},
+        {"verbose",   no_argument,       0, 'v'},
+        {"help",      no_argument,       0, 'h'},
         {0, 0, 0, 0}
     };
 
-    while ((opt = getopt_long(argc, argv, "l:w:t:h", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:w:t:vh", long_options, NULL)) != -1) {
         switch (opt) {
             case 'l':
                 split_limit = atoi(optarg);
@@ -140,6 +148,9 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: swaytile daemon is not running.\n");
                     return 1;
                 }
+            case 'v':
+                verbose_mode = true; // <-- Enable verbose logging
+                break;
             case 'h':
                 print_usage(argv[0]);
                 return 0;
@@ -150,6 +161,7 @@ int main(int argc, char *argv[]) {
     }
 
     layout_map_init();
+    layout_map_set_verbose(verbose_mode);
 
     int sway_fd = ipc_connect();
     if (sway_fd < 0) {
@@ -203,10 +215,12 @@ int main(int argc, char *argv[]) {
                         if (root) {
                             char *toggle_cmd = flatten_build_toggle_cmd(root, mode);
                             if (toggle_cmd && strlen(toggle_cmd) > 0) {
-                                fprintf(stderr, "[TOGGLE EXEC] Mode '%s' -> Sending command: %s\n", mode, toggle_cmd);
+                                if (verbose_mode) {
+                                    fprintf(stderr, "[TOGGLE EXEC] Mode '%s' -> Sending command: %s\n", mode, toggle_cmd);
+                                }
                                 ipc_command(sway_fd, IPC_RUN_COMMAND, toggle_cmd, NULL, NULL, NULL);
                                 free(toggle_cmd);
-                            }
+                                }
                             tree_free(root);
                         }
                     }
