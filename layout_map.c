@@ -203,7 +203,6 @@ bool layout_map_check_and_update_split(const char *ws_name, const char *new_spli
     WorkspaceState *node = get_or_create_node(ws_name);
     if (!node) return true;
 
-    /* If limit is 0 or unlimited, always allow */
     if (limit <= 0) return true;
 
     /* If this is the first split, record it without counting a change */
@@ -216,7 +215,7 @@ bool layout_map_check_and_update_split(const char *ws_name, const char *new_spli
     /* If the direction changed, increment the change counter */
     if (strcmp(node->last_split, new_split) != 0) {
         if (node->split_changes >= limit) {
-            return false; /* Cap reached! Disallow further direction changes */
+            return false;
         }
         node->split_changes++;
         strncpy(node->last_split, new_split, sizeof(node->last_split) - 1);

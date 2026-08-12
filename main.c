@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
             case 'v':
-                verbose_mode = true; // <-- Enable verbose logging
+                verbose_mode = true;
                 break;
             case 'h':
                 print_usage(argv[0]);
@@ -196,7 +196,6 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        /* Handle client IPC toggle commands */
         if (FD_ISSET(server_fd, &readfds)) {
             int client_fd = accept(server_fd, NULL, NULL);
             if (client_fd >= 0) {
@@ -228,7 +227,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        /* Handle Sway window events */
         if (FD_ISSET(sway_fd, &readfds)) {
             uint32_t type = 0;
             char *payload = NULL;

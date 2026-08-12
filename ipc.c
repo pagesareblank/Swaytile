@@ -182,11 +182,11 @@ static int read_full(int fd, void *buffer, size_t size)
         ssize_t n = read(fd, (char *)buffer + total, size - total);
 
         if (n == 0) {
-            return -1;  // connection closed
+            return -1;
         }
 
         if (n < 0) {
-            return -1;  // read error
+            return -1;
         }
 
         total += n;
@@ -203,24 +203,20 @@ int ipc_read(int fd, uint32_t *type, char **payload, uint32_t *length)
         return -1;
     }
 
-    /* Check the IPC magic */
     if (memcmp(header, "i3-ipc", 6) != 0) {
         fprintf(stderr, "Invalid IPC magic\n");
         return -1;
     }
 
-    /* Extract length and message type */
     memcpy(length, header + 6, sizeof(*length));
     memcpy(type, header + 10, sizeof(*type));
 
-    /* Allocate space for the payload plus '\0' */
     *payload = malloc(*length + 1);
 
     if (*payload == NULL) {
         return -1;
     }
 
-    /* Read the payload */
     if (read_full(fd, *payload, *length) == -1) {
         free(*payload);
         *payload = NULL;
