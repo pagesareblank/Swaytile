@@ -221,7 +221,6 @@ sudo make install
 * [Sway](https://swaywm.org/)
 * A C compiler
 * `make`
-* The Sway IPC interface
 
 ## Why Swaytile?
 
