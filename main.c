@@ -10,9 +10,6 @@
 #include <sys/socket.h>
 
 #include "swaytile.h"
-#include "tree.h"
-#include "layout_map.h"
-#include "flatten.h"
 
 #define MAX_ALLOWED_WORKSPACES 32
 

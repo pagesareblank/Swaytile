@@ -1,8 +1,7 @@
-#include "flatten.h"
-#include "layout_map.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "swaytile.h"
 
 static void collect_leaf_window_ids(const Node *node, int64_t *ids, int *count, int max_ids) {
     if (!node || *count >= max_ids) return;

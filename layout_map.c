@@ -1,7 +1,7 @@
-#include "layout_map.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "swaytile.h"
 
 static WorkspaceState *map_head = NULL;
 

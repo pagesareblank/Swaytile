@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cJSON.h"
-#include "tree.h"
+#include "swaytile.h"
 
 void tree_dump(const Node *node, int depth) {
     if (!node) return;
