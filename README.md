@@ -16,6 +16,9 @@ It dynamically adjusts split directions as you open and arrange windows, while a
 * Simple command-line interface
 * Builds with a standard `Makefile`
 
+Beware the layout function is superficial because Sway does not provide a direct way to solve this,
+therefore it can come to a increasingly noticable delay when toggleing back to split layout.
+
 ## Installation
 
 Clone the repository:
