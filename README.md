@@ -17,7 +17,7 @@ It dynamically adjusts split directions as you open and arrange windows, while a
 * Builds with a standard `Makefile`
 
 Beware the layout function is superficial because Sway does not provide a direct way to solve this,
-therefore it can come to a increasingly noticable delay when toggleing back to split layout.
+therefore it can come to a increasingly noticable delay when toggleing back to a very deeply nested split layout.
 
 ## Installation
 
