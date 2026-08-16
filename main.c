@@ -104,8 +104,6 @@ const char *calculate_next_split(const Node *root, const Node *focused) {
     const char *natural_split = (focused->width > focused->height) ? "splith" : "splitv";
 
     if (ws && ws->name && split_limit > 0) {
-        /* If the change limit is hit, return NULL so Sway opens 
-           the next window as a peer/sibling instead of nesting a new split container. */
         if (!layout_map_check_and_update_split(ws->name, natural_split, split_limit)) {
             return NULL; 
         }

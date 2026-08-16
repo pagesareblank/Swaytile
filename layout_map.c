@@ -14,13 +14,10 @@ void layout_map_set_verbose(bool verbose) {
 static Node *node_copy(const Node *src) {
     if (!src) return NULL;
 
-    /* If this is an intermediate layout container (type 'con', name 'NULL' or similar) 
-       that only has 1 child, skip (collapse) it entirely to avoid nesting bloat! */
     if (src->type && strcmp(src->type, "con") == 0 && 
         (!src->name || strcmp(src->name, "NULL") == 0) && 
         src->num_children == 1) {
         
-        /* Recursively copy its single child instead of creating this wrapper node */
         return node_copy(src->children[0]);
     }
 
@@ -38,7 +35,6 @@ static Node *node_copy(const Node *src) {
     dst->height = src->height;
 
     if (src->num_children > 0) {
-        /* Filter out any single-child redundancies within children lists */
         dst->children = malloc(src->num_children * sizeof(Node *));
         int real_count = 0;
         
@@ -52,7 +48,6 @@ static Node *node_copy(const Node *src) {
         }
         dst->num_children = real_count;
         
-        /* If a node ended up with 0 children after filtering, handle safely */
         if (dst->num_children == 0) {
             free(dst->children);
             dst->children = NULL;
@@ -190,12 +185,12 @@ Node *layout_map_get_tree(const char *ws_name) {
 }
 
 const char *layout_map_get_last_split(const char *ws_name) {
-    if (!ws_name) return "splitv"; // Safe fallback default
+    if (!ws_name) return "splitv";
     WorkspaceState *node = get_or_create_node(ws_name);
     if (node && node->last_split[0] != '\0') {
         return node->last_split;
     }
-    return "splitv"; // Default fallback if none recorded yet
+    return "splitv";
 }
 
 bool layout_map_check_and_update_split(const char *ws_name, const char *new_split, int limit) {
@@ -205,14 +200,12 @@ bool layout_map_check_and_update_split(const char *ws_name, const char *new_spli
 
     if (limit <= 0) return true;
 
-    /* If this is the first split, record it without counting a change */
     if (node->last_split[0] == '\0') {
         strncpy(node->last_split, new_split, sizeof(node->last_split) - 1);
         node->split_changes = 0;
         return true;
     }
 
-    /* If the direction changed, increment the change counter */
     if (strcmp(node->last_split, new_split) != 0) {
         if (node->split_changes >= limit) {
             return false;
